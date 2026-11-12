@@ -5,6 +5,9 @@ using System.Windows.Forms;
 
 sealed class SolitairePatcherApp : Form
 {
+    static readonly string executableSettingsPath =
+        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "last-executable.txt");
+
     readonly TextBox executablePath = new TextBox
     {
         ReadOnly = true,
@@ -144,7 +147,7 @@ sealed class SolitairePatcherApp : Form
     {
         try
         {
-            var path = File.ReadAllText(ExecutableSettingsPath());
+            var path = File.ReadAllText(executableSettingsPath);
             return string.IsNullOrWhiteSpace(path) ? null : path;
         }
         catch (IOException)
@@ -162,20 +165,18 @@ sealed class SolitairePatcherApp : Form
         try
         {
             var fullPath = Path.GetFullPath(path);
-            var settingsPath = ExecutableSettingsPath();
-            Directory.CreateDirectory(Path.GetDirectoryName(settingsPath));
-            var temporary = settingsPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            var temporary = executableSettingsPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
 
             try
             {
                 File.WriteAllText(temporary, fullPath);
-                if (File.Exists(settingsPath))
+                if (File.Exists(executableSettingsPath))
                 {
-                    File.Replace(temporary, settingsPath, null);
+                    File.Replace(temporary, executableSettingsPath, null);
                 }
                 else
                 {
-                    File.Move(temporary, settingsPath);
+                    File.Move(temporary, executableSettingsPath);
                 }
             }
             finally
@@ -189,12 +190,6 @@ sealed class SolitairePatcherApp : Form
         {
             return "Could not save the executable location. " + error.Message;
         }
-    }
-
-    static string ExecutableSettingsPath()
-    {
-        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            PatchSolitaire.GameName + " Patcher", "last-executable.txt");
     }
 
     void UpdatePatch(bool enablePatch)
