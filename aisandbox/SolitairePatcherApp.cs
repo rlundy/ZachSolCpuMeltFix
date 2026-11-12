@@ -22,10 +22,10 @@ sealed class SolitairePatcherApp : Form
     {
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
-        Application.Run(new SolitairePatcherApp(args.Length == 1 ? args[0] : FindLocalGame()));
+        Application.Run(new SolitairePatcherApp(args.Length == 1 ? args[0] : null));
     }
 
-    SolitairePatcherApp(string path)
+    SolitairePatcherApp(string requestedPath)
     {
         Text = PatchSolitaire.GameName + " Patcher";
         Font = SystemFonts.MessageBoxFont;
@@ -80,8 +80,15 @@ sealed class SolitairePatcherApp : Form
         layout.SetColumnSpan(actions, 3);
         Controls.Add(layout);
 
-        executablePath.Text = path;
-        RefreshStatus();
+        if (string.IsNullOrWhiteSpace(requestedPath))
+        {
+            executablePath.Text = LoadExecutablePath() ?? FindLocalGame();
+            RefreshStatus();
+        }
+        else
+        {
+            SelectExecutable(requestedPath);
+        }
         ActiveControl = browse;
     }
 
@@ -122,10 +129,72 @@ sealed class SolitairePatcherApp : Form
             }
             if (picker.ShowDialog(this) == DialogResult.OK)
             {
-                executablePath.Text = picker.FileName;
-                RefreshStatus();
+                SelectExecutable(picker.FileName);
             }
         }
+    }
+
+    void SelectExecutable(string path)
+    {
+        executablePath.Text = path;
+        RefreshStatus(SaveExecutablePath(path));
+    }
+
+    static string LoadExecutablePath()
+    {
+        try
+        {
+            var path = File.ReadAllText(ExecutableSettingsPath());
+            return string.IsNullOrWhiteSpace(path) ? null : path;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    static string SaveExecutablePath(string path)
+    {
+        try
+        {
+            var fullPath = Path.GetFullPath(path);
+            var settingsPath = ExecutableSettingsPath();
+            Directory.CreateDirectory(Path.GetDirectoryName(settingsPath));
+            var temporary = settingsPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+
+            try
+            {
+                File.WriteAllText(temporary, fullPath);
+                if (File.Exists(settingsPath))
+                {
+                    File.Replace(temporary, settingsPath, null);
+                }
+                else
+                {
+                    File.Move(temporary, settingsPath);
+                }
+            }
+            finally
+            {
+                File.Delete(temporary);
+            }
+
+            return null;
+        }
+        catch (Exception error)
+        {
+            return "Could not save the executable location. " + error.Message;
+        }
+    }
+
+    static string ExecutableSettingsPath()
+    {
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            PatchSolitaire.GameName + " Patcher", "last-executable.txt");
     }
 
     void UpdatePatch(bool enablePatch)
