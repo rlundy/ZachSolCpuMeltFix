@@ -1,7 +1,10 @@
 using System;
 using System.Drawing;
 using System.IO;
+using System.Reflection;
 using System.Windows.Forms;
+
+[assembly: AssemblyVersion("1.0.0.0")]
 
 sealed class SolitairePatcherApp : Form
 {
@@ -52,6 +55,14 @@ sealed class SolitairePatcherApp : Form
         actions.Controls.Add(apply);
         actions.Controls.Add(restore);
 
+        var version = new Label
+        {
+            Text = "v" + typeof(SolitairePatcherApp).Assembly.GetName().Version.ToString(3),
+            AutoSize = true,
+            Anchor = AnchorStyles.Right,
+            ForeColor = SystemColors.GrayText
+        };
+
         var layout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -80,7 +91,8 @@ sealed class SolitairePatcherApp : Form
         layout.Controls.Add(feedback, 0, 3);
         layout.SetColumnSpan(feedback, 3);
         layout.Controls.Add(actions, 0, 4);
-        layout.SetColumnSpan(actions, 3);
+        layout.SetColumnSpan(actions, 2);
+        layout.Controls.Add(version, 2, 4);
         Controls.Add(layout);
 
         if (string.IsNullOrWhiteSpace(requestedPath))
